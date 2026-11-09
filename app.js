@@ -12,6 +12,25 @@ state.essentials = state.essentials || null;
 const cfg = TRIP_CONFIG;
 
 function save(){ localStorage.setItem("manipalTripState", JSON.stringify(state)); }
+if(state.itineraryVersion !== 2){
+  const dayOneMeals=state.meals.day1;
+  if(Array.isArray(dayOneMeals)){
+    state.meals.day1=dayOneMeals.flatMap(meal=>{
+      if(meal.text==="Coffee at home")return [{...meal,time:"2:00 PM",text:"Lunch at home"}];
+      if(meal.text==="Tea / snacks on the way")return [{...meal,time:"5:45–6:15 PM",text:"Hassan break + early dinner"}];
+      if(meal.text==="Dinner on the highway")return [];
+      return [meal];
+    });
+  }
+  for(const id of Object.keys(state.actuals)){
+    if(id.startsWith("d1-"))delete state.actuals[id];
+  }
+  for(const id of Object.keys(state.planned)){
+    if(id.startsWith("d1-"))delete state.planned[id];
+  }
+  state.itineraryVersion=2;
+  save();
+}
 function parseTime(str){
   const m=str.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i); if(!m)return null;
   let h=+m[1], min=+(m[2]||0); if(m[3].toUpperCase()==="PM"&&h!==12)h+=12; if(m[3].toUpperCase()==="AM"&&h===12)h=0;
@@ -55,7 +74,8 @@ function renderDocs(){
     const wrap=document.createElement("div"); wrap.className="doc";
     const icon=document.createElement("div"); icon.className="doc-icon"; icon.textContent=d.file.toLowerCase().endsWith(".pdf")?"📕":"🖼️"; wrap.appendChild(icon);
     const info=document.createElement("div"); info.className="doc-info";
-    info.innerHTML=`<b>${d.name}</b><a href="${d.file}" target="_blank" rel="noopener">Open document ↗</a>`;
+    const linkText=d.file.toLowerCase().endsWith(".pdf")?"Open password-protected PDF ↗":"Open image ↗";
+    info.innerHTML=`<b>${d.name}</b><a href="${d.file}" target="_blank" rel="noopener">${linkText}</a>`;
     wrap.appendChild(info); el.appendChild(wrap);
   });
 }
@@ -154,7 +174,6 @@ function updateProgress(){
   const current=latestReached(); document.getElementById("currentPlace").textContent=current?current.title:"Not set";
   document.getElementById("statusText").textContent=done?`${done}/${stops.length} checkpoints`: "Ready";
 }
-function getNextCoords(){ const n=nextPending(); return n ? {lat:n.lat,lng:n.lng,name:n.title,map:n.map}:null; }
 function getOrigin(){
   const locationAge=state.location?.updatedAt?Date.now()-Date.parse(state.location.updatedAt):Infinity;
   if(state.location && locationAge>=0 && locationAge<2*60*60*1000)return state.location;
@@ -164,43 +183,6 @@ function getOrigin(){
     : {address:stop.title,name:stop.title};
   return cfg.home || null;
 }
-async function routeFrom(origin,destination){
-  if(!cfg.googleRoutesApiKey || cfg.googleRoutesApiKey.includes("PASTE_")) return null;
-  const url="https://routes.googleapis.com/directions/v2:computeRoutes";
-  const originLocation=origin.lat != null && origin.lng != null
-    ? {latLng:{latitude:origin.lat,longitude:origin.lng}}
-    : {address:origin.address || origin.name};
-  const destinationLocation=destination.lat != null && destination.lng != null
-    ? {latLng:{latitude:destination.lat,longitude:destination.lng}}
-    : {address:destination.name};
-  const body={origin:{location:originLocation},destination:{location:destinationLocation},travelMode:"DRIVE",routingPreference:"TRAFFIC_AWARE",computeAlternativeRoutes:false,units:"METRIC"};
-  const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","X-Goog-Api-Key":cfg.googleRoutesApiKey,"X-Goog-FieldMask":"routes.duration,routes.distanceMeters"},body:JSON.stringify(body)});
-  if(!r.ok) throw new Error("Routes API "+r.status);
-  return (await r.json()).routes?.[0]||null;
-}
-function formatDuration(seconds){ let m=Math.round(Number(seconds)/60); if(m<60)return `${m} min`; let h=Math.floor(m/60), mm=m%60; return mm?`${h} h ${mm} min`:`${h} h`; }
-async function updateRoute(){
-  const dest=getNextCoords(); if(!dest){document.getElementById("distance").textContent="—";document.getElementById("travelTime").textContent="—";return;}
-  const loc=getOrigin();
-  if(!loc){document.getElementById("distance").textContent="Enable location";document.getElementById("travelTime").textContent="then refresh";return;}
-  if(!cfg.googleRoutesApiKey || cfg.googleRoutesApiKey.includes("PASTE_")){
-    document.getElementById("distance").textContent="—";
-    document.getElementById("travelTime").textContent="Use Directions";
-    document.getElementById("locationHint").textContent="Your latest location or reached checkpoint is ready. Live estimates need an optional Routes API key.";
-    return;
-  }
-  try{
-    const route=await routeFrom(loc,dest);
-    if(!route) throw new Error("No route");
-    document.getElementById("distance").textContent=(route.distanceMeters/1000).toFixed(1)+" km";
-    document.getElementById("travelTime").textContent=formatDuration(route.duration);
-    document.getElementById("locationHint").textContent=`Live route to ${dest.name}. Google traffic-aware route.`;
-  }catch(e){
-    document.getElementById("distance").textContent="API unavailable";
-    document.getElementById("travelTime").textContent="Use Directions";
-    document.getElementById("locationHint").textContent="Check your Routes API key/referrer restriction, or use Directions.";
-  }
-}
 function useLocation(){
   if(!navigator.geolocation){alert("Geolocation is not supported.");return;}
   const button=document.getElementById("locateBtn");
@@ -208,7 +190,6 @@ function useLocation(){
   navigator.geolocation.getCurrentPosition(pos=>{
     state.location={lat:pos.coords.latitude,lng:pos.coords.longitude,updatedAt:new Date().toISOString()}; save();
     button.textContent="📍 Location updated"; button.disabled=false;
-    updateRoute();
   },err=>{alert(err.code===1?"Location permission was not granted. You can still use the checkpoint and Maps links.":"Could not get your location. Check your connection and location settings.");button.textContent="📍 Use my location";button.disabled=false;},{enableHighAccuracy:true,timeout:15000,maximumAge:30000});
 }
 function directions(){
@@ -253,10 +234,10 @@ function addEssential(){
   state.essentials.push({id:`essential-${Date.now()}`,text:"",checked:false});save();renderEssentials();
 }
 function tick(){ document.getElementById("clock").textContent=new Date().toLocaleString("en-IN",{weekday:"short",day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit",second:"2-digit"}); }
-function renderAll(){renderDays();renderActuals();updateProgress();refreshControls();updateRoute();}
+function renderAll(){renderDays();renderActuals();updateProgress();refreshControls();}
 document.getElementById("locateBtn").onclick=useLocation;
 document.getElementById("mapsBtn").onclick=directions;
 document.getElementById("reachedBtn").onclick=()=>markReached(document.getElementById("checkpointSelect").value);
 document.getElementById("clearBtn").onclick=()=>clearCheckpoint(document.getElementById("checkpointSelect").value);
 document.getElementById("addEssential").onclick=addEssential;
-renderDocs(); populateControls(); renderMeals(); renderEssentials(); renderAll(); tick(); setInterval(tick,1000); setInterval(updateRoute,120000);
+renderDocs(); populateControls(); renderMeals(); renderEssentials(); renderAll(); tick(); setInterval(tick,1000);
