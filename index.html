@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0f4c5c">
+  <title>Manipal Convocation Family Trip</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="hero">
+  <div>
+    <div class="eyebrow">18–20 NOVEMBER 2026</div>
+    <h1>Manipal Convocation<br><span>Family Trip</span></h1>
+    <p>Bengaluru → Dharmasthala → Karkala → Manipal → Udupi → Kapu → Mangalore → Bengaluru</p>
+  </div>
+  <div class="hero-badge">5 adults + 1 toddler<br><b>Innova + Driver</b></div>
+</header>
+
+<main>
+  <section class="top-grid">
+    <div class="card live-card">
+      <div class="section-title">🟢 Live Trip Tracker</div>
+      <div class="live-row"><span>Current</span><strong id="currentPlace">Not set</strong></div>
+      <div class="live-row"><span>Next stop</span><strong id="nextStop">—</strong></div>
+      <div class="live-row"><span>Local time</span><strong id="clock">—</strong></div>
+      <div class="progress-wrap"><div id="progressBar"></div></div>
+      <div class="progress-label"><span id="progressText">0% complete</span><span id="statusText">Ready</span></div>
+      <div class="actions">
+        <button class="primary" id="locateBtn">📍 Use my location</button>
+        <button class="secondary" id="mapsBtn">🗺️ Directions to next</button>
+      </div>
+      <div class="travel-metrics">
+        <div><small>Distance</small><b id="distance">—</b></div>
+        <div><small>Travel time</small><b id="travelTime">—</b></div>
+      </div>
+      <p class="hint" id="locationHint">Location permission is used only in this page to calculate the next leg.</p>
+    </div>
+
+    <div class="card docs-card">
+      <div class="section-title">📄 Stay & Trip Documents</div>
+      <div id="docList"></div>
+      <p class="hint">Open a document directly here. PDFs open in your browser and can be printed or downloaded.</p>
+    </div>
+  </section>
+
+  <section class="card controls">
+    <div class="section-title">⚙️ Trip Controls</div>
+    <div class="control-row">
+      <label>Day
+        <select id="daySelect"></select>
+      </label>
+      <label>Checkpoint
+        <select id="checkpointSelect"></select>
+      </label>
+      <button class="success" id="reachedBtn">✓ Mark reached now</button>
+      <button class="warning" id="clearBtn">↺ Clear checkpoint</button>
+    </div>
+    <div class="actuals" id="actuals"></div>
+    <p class="hint">Marking a later checkpoint also marks earlier stops reached. Use the pen to correct a planned or actual time. Clearing a checkpoint resets it and all later checkpoints so tracking stays in order.</p>
+  </section>
+
+  <section id="days"></section>
+
+  <section class="bottom-grid">
+    <div class="card meal-card">
+      <div class="section-title">🍽️ Meal Plan</div>
+      <div id="meals"></div>
+      <p class="hint">Meal times and notes are editable on this device.</p>
+    </div>
+    <div class="card essentials-card">
+      <div class="section-title">✅ Travel Essentials</div>
+      <div id="essentials"></div>
+      <button class="add-btn" id="addEssential">＋ Add an essential</button>
+      <p class="hint">Your checklist edits are saved in this browser.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>Make memories, not just a trip. ❤️</span>
+  <span>Designed for GitHub Pages • Works on phone</span>
+</footer>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
